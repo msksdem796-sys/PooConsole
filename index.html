@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PooConsole — игровая консоль в одном файле</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: #05070d;
+  color: #d6e8ff;
+  font-family: system-ui, -apple-system, Arial, sans-serif;
+  line-height: 1.7;
+}
+a { color: #00e0ff; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.scanlines {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  background: repeating-linear-gradient(
+    180deg,
+    rgba(255,255,255,0.015) 0 1px,
+    transparent 1px 3px
+  );
+}
+
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  padding: 14px 24px;
+  background: rgba(5,7,13,0.9);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #1c2745;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+nav .nav-logo {
+  font-weight: 900;
+  letter-spacing: 3px;
+  font-size: 14px;
+  background: linear-gradient(90deg, #ff6a00, #ffcf40, #00e0ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+nav .nav-links {
+  display: flex;
+  gap: 18px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+nav .nav-links a {
+  color: #8a9bb0;
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+nav .nav-links a:hover { color: #00e0ff; text-decoration: none; }
+@media (max-width: 700px) {
+  nav .nav-links { gap: 10px; }
+  nav .nav-links a { font-size: 10px; }
+}
+
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100px 20px 60px;
+  text-align: center;
+  background: radial-gradient(circle at 50% 40%, #1a2444 0%, #05070d 70%);
+}
+.hero svg {
+  width: 100px;
+  height: 120px;
+  margin-bottom: 20px;
+  filter: drop-shadow(0 0 40px rgba(255,150,0,0.6));
+}
+.hero h1 {
+  font-size: clamp(36px, 6vw, 64px);
+  font-weight: 900;
+  letter-spacing: 6px;
+  background: linear-gradient(90deg, #ff6a00, #ffcf40, #00e0ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin-bottom: 10px;
+}
+.hero .tag {
+  color: #6b7a99;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  font-size: 13px;
+  margin-bottom: 36px;
+}
+.hero-btns {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 15px 32px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  border: none;
+  transition: all .2s;
+  font-family: inherit;
+  text-decoration: none;
+}
+.btn:hover { text-decoration: none; transform: translateY(-2px); }
+.btn-main {
+  background: linear-gradient(90deg, #00e0ff, #00ffa3);
+  color: #001;
+  box-shadow: 0 8px 30px rgba(0,224,255,0.4);
+}
+.btn-main:hover { box-shadow: 0 12px 40px rgba(0,224,255,0.6); }
+.btn-line {
+  background: transparent;
+  color: #00e0ff;
+  border: 2px solid #00e0ff;
+}
+.btn-line:hover { background: rgba(0,224,255,0.1); }
+
+section {
+  padding: 70px 20px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+section h2 {
+  font-size: clamp(24px, 3vw, 34px);
+  letter-spacing: 3px;
+  color: #00e0ff;
+  margin-bottom: 10px;
+  text-shadow: 0 0 16px rgba(0,224,255,0.4);
+}
+section .sub {
+  color: #6b7a99;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 30px;
+}
+p { color: #a8b8cc; font-size: 15px; margin-bottom: 16px; }
+p strong { color: #d6e8ff; }
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px;
+  margin-top: 20px;
+}
+.step-card {
+  background: linear-gradient(160deg, #121a2e, #0a1020);
+  border: 1px solid #24365e;
+  border-radius: 14px;
+  padding: 26px 22px;
+  transition: all .2s;
+}
+.step-card:hover {
+  border-color: #00e0ff;
+  transform: translateY(-3px);
+}
+.step-card .num {
+  display: inline-block;
+  width: 36px;
+  height: 36px;
+  line-height: 36px;
+  text-align: center;
+  background: linear-gradient(135deg, #00e0ff, #00ffa3);
+  color: #001;
+  border-radius: 10px;
+  font-weight: 900;
+  font-size: 16px;
+  margin-bottom: 14px;
+  box-shadow: 0 0 16px rgba(0,224,255,0.4);
+}
+.step-card h3 {
+  font-size: 16px;
+  color: #d6e8ff;
+  margin-bottom: 8px;
+  letter-spacing: 1px;
+}
+.step-card p {
+  font-size: 13px;
+  color: #8a9bb0;
+  margin-bottom: 16px;
+  min-height: 40px;
+}
+.step-card .btn {
+  padding: 10px 22px;
+  font-size: 11px;
+}
+
+.timeline {
+  position: relative;
+  padding-left: 34px;
+  margin-top: 20px;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 0; bottom: 0;
+  width: 2px;
+  background: linear-gradient(180deg, #00e0ff, #ff6a00, transparent);
+}
+.tl {
+  position: relative;
+  padding: 16px 0 16px 18px;
+}
+.tl::before {
+  content: '';
+  position: absolute;
+  left: -29px;
+  top: 24px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #00e0ff;
+  box-shadow: 0 0 12px #00e0ff;
+  border: 3px solid #05070d;
+}
+.tl .date {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: #ffcf40;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.tl h3 {
+  font-size: 16px;
+  color: #d6e8ff;
+  margin-bottom: 6px;
+}
+.tl p {
+  font-size: 13px;
+  color: #8a9bb0;
+  margin: 0;
+}
+
+.authors {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+.author {
+  background: linear-gradient(160deg, #121a2e, #0a1020);
+  border: 1px solid #24365e;
+  border-radius: 14px;
+  padding: 26px 22px;
+  text-align: center;
+  transition: all .25s;
+}
+.author:hover { border-color: #00e0ff; transform: translateY(-4px); }
+.author .avatar {
+  width: 70px; height: 70px;
+  border-radius: 50%;
+  margin: 0 auto 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; font-weight: 900;
+  background: linear-gradient(135deg, #00e0ff, #00ffa3);
+  color: #001;
+  box-shadow: 0 0 26px rgba(0,224,255,0.35);
+}
+.author.orange .avatar {
+  background: linear-gradient(135deg, #ff6a00, #ffcf40);
+  box-shadow: 0 0 26px rgba(255,106,0,0.35);
+}
+.author .name {
+  font-size: 16px;
+  font-weight: 800;
+  color: #d6e8ff;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+.author .role {
+  font-size: 11px;
+  color: #6b7a99;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.author .desc {
+  font-size: 13px;
+  color: #8a9bb0;
+  line-height: 1.6;
+}
+
+.code-box {
+  background: linear-gradient(160deg, #0a1020, #05070d);
+  border: 1px solid #24365e;
+  border-radius: 14px;
+  padding: 22px;
+  margin-top: 16px;
+}
+.code-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.code-head .file {
+  font-family: 'Consolas', monospace;
+  font-size: 12px;
+  color: #6b7a99;
+  letter-spacing: 1px;
+}
+.copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: linear-gradient(90deg, #00e0ff, #00ffa3);
+  color: #001;
+  border: none;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  cursor: pointer;
+  text-transform: uppercase;
+  font-family: inherit;
+  transition: all .2s;
+}
+.copy-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,224,255,0.5); }
+.copy-btn.done { background: linear-gradient(90deg, #00ffa3, #00e0ff); }
+.code-view {
+  background: #020408;
+  border: 1px solid #1c2745;
+  border-radius: 10px;
+  padding: 16px;
+  max-height: 320px;
+  overflow: auto;
+  font-family: 'Consolas', monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #a8c0d8;
+  white-space: pre;
+}
+.code-view::-webkit-scrollbar { width: 8px; height: 8px; }
+.code-view::-webkit-scrollbar-track { background: #0a1020; }
+.code-view::-webkit-scrollbar-thumb { background: #24365e; border-radius: 4px; }
+
+.inst {
+  background: linear-gradient(160deg, #121a2e, #0a1020);
+  border: 1px solid #24365e;
+  border-radius: 14px;
+  padding: 22px 24px;
+  margin-top: 14px;
+}
+.inst h3 {
+  font-size: 15px;
+  color: #ffcf40;
+  margin-bottom: 12px;
+  letter-spacing: 1px;
+}
+.inst ol, .inst ul {
+  padding-left: 22px;
+  color: #a8b8cc;
+  font-size: 14px;
+  line-height: 1.9;
+}
+.inst li { margin-bottom: 4px; }
+.inst code {
+  background: #020408;
+  border: 1px solid #1c2745;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Consolas', monospace;
+  font-size: 12px;
+  color: #ffcf40;
+}
+
+.tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.tab {
+  padding: 10px 18px;
+  background: transparent;
+  border: 1px solid #24365e;
+  border-radius: 8px;
+  color: #8a9bb0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  text-transform: uppercase;
+  font-family: inherit;
+  transition: all .2s;
+}
+.tab:hover { border-color: #00e0ff; color: #00e0ff; }
+.tab.active {
+  background: linear-gradient(135deg, rgba(0,224,255,0.15), rgba(0,255,163,0.15));
+  border-color: #00e0ff;
+  color: #00e0ff;
+}
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+.faq {
+  margin-top: 16px;
+}
+.faq-item {
+  background: #0a1020;
+  border: 1px solid #24365e;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+.faq-q {
+  padding: 16px 20px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  color: #d6e8ff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.faq-q::after {
+  content: '+';
+  font-size: 20px;
+  color: #00e0ff;
+  transition: transform .2s;
+}
+.faq-item.open .faq-q::after { transform: rotate(45deg); }
+.faq-a {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height .3s;
+  padding: 0 20px;
+  font-size: 13px;
+  color: #8a9bb0;
+  line-height: 1.7;
+}
+.faq-item.open .faq-a { max-height: 400px; padding: 0 20px 16px; }
+
+footer {
+  padding: 40px 20px;
+  text-align: center;
+  color: #6b7a99;
+  font-size: 12px;
+  border-top: 1px solid #1c2745;
+  margin-top: 40px;
+}
+footer .logo {
+  font-size: 18px;
+  margin-bottom: 10px;
+  background: linear-gradient(90deg, #ff6a00, #ffcf40, #00e0ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 900;
+  letter-spacing: 3px;
+}
+footer .authors-line {
+  margin-top: 10px;
+  color: #8a9bb0;
+}
+
+.cta {
+  text-align: center;
+  padding: 50px 24px;
+  background: linear-gradient(135deg, rgba(255,106,0,0.08), rgba(0,224,255,0.08));
+  border: 2px solid rgba(255,207,64,0.3);
+  border-radius: 18px;
+  margin-top: 30px;
+}
+.cta h3 {
+  font-size: 22px;
+  color: #ffcf40;
+  margin-bottom: 12px;
+  letter-spacing: 2px;
+}
+.cta p {
+  max-width: 600px;
+  margin: 0 auto 22px;
+  color: #a8b8cc;
+}
+</style>
+</head>
+<body>
+
+<div class="scanlines"></div>
+
+<nav>
+  <div class="nav-logo">POOCONSOLE</div>
+  <div class="nav-links">
+    <a href="#what">Что это</a>
+    <a href="#play">Как играть</a>
+    <a href="#history">История</a>
+    <a href="#authors">Авторы</a>
+    <a href="#code">Код</a>
+    <a href="#faq">FAQ</a>
+  </div>
+</nav>
+
+<div class="hero">
+  <svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="gh" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#ff8c1a"/>
+        <stop offset="100%" stop-color="#ff6a00"/>
+      </linearGradient>
+    </defs>
+    <path d="M50 5 C20 5 8 30 8 60 L8 108 C8 112 12 114 16 112 L26 106 C29 104 32 104 35 106 L45 112 C48 114 52 114 55 112 L65 106 C68 104 71 104 74 106 L84 112 C88 114 92 112 92 108 L92 60 C92 30 80 5 50 5 Z"
+      fill="url(#gh)" stroke="#a54000" stroke-width="2"/>
+    <ellipse cx="35" cy="55" rx="12" ry="10" fill="#fff"/>
+    <ellipse cx="68" cy="55" rx="12" ry="10" fill="#fff"/>
+    <circle cx="37" cy="56" r="6" fill="#0033ff"/>
+    <circle cx="70" cy="56" r="6" fill="#0033ff"/>
+  </svg>
+  <h1>POOCONSOLE</h1>
+  <div class="tag">Игровая консоль в одном файле</div>
+  <div class="hero-btns">
+    <a class="btn btn-main" href="pooconsole.html" target="_blank">🎮 Играть онлайн</a>
+    <a class="btn btn-line" href="#play">📖 Как играть</a>
+  </div>
+</div>
+
+<section id="what">
+  <h2>ЧТО ЭТО ТАКОЕ</h2>
+  <div class="sub">Простыми словами</div>
+  <p>
+    <strong>PooConsole</strong> — это игровая консоль, которая живёт прямо в браузере.
+    Не надо ничего устанавливать, регистрироваться или платить. Открыл файл — играешь.
+  </p>
+  <p>
+    Внутри <strong>19 игр</strong> — платформеры, шутеры, гонки, головоломки и аркады.
+    Есть аккаунты, сохранения, достижения и система <strong>картриджей</strong>:
+    игры можно скачивать и добавлять как обычные текстовые файлы.
+  </p>
+  <p>
+    Всё это — <strong>один HTML-файл меньше мегабайта</strong>. Работает оффлайн,
+    на любом компьютере или ноутбуке с современным браузером.
+  </p>
+</section>
+
+<section id="play">
+  <h2>КАК ИГРАТЬ</h2>
+  <div class="sub">Выбери удобный способ</div>
+
+  <div class="steps">
+    <div class="step-card">
+      <div class="num">1</div>
+      <h3>Играть прямо сейчас</h3>
+      <p>Ничего не скачивай. Нажми «Играть онлайн» — консоль откроется в браузере.</p>
+      <a class="btn btn-main" href="pooconsole.html" target="_blank">🎮 ИГРАТЬ</a>
+    </div>
+
+    <div class="step-card">
+      <div class="num">2</div>
+      <h3>Скачать один файл</h3>
+      <p>Скачай PooConsole, найди его в загрузках и открой двойным кликом.</p>
+      <button class="btn btn-main" id="downloadBtn">💾 СКАЧАТЬ</button>
+    </div>
+
+    <div class="step-card">
+      <div class="num">3</div>
+      <h3>Создать свою игру</h3>
+      <p>Хочешь сделать картридж? Изучи короткую инструкцию и добавь свою игру в консоль.</p>
+      <a class="btn btn-main" href="#code">🛠 ИНСТРУКЦИЯ</a>
+    </div>
+  </div>
+</section>
+
+<section id="history">
+  <h2>ИСТОРИЯ СОЗДАНИЯ</h2>
+  <div class="sub">Как мы дошли до этого</div>
+
+  <div class="timeline">
+    <div class="tl">
+      <div class="date">Начало</div>
+      <h3>Идея псевдо-ОС</h3>
+      <p>Появилась мысль: сделать игровую консоль, которая живёт прямо в браузере и не требует установки. Один HTML-файл — и всё.</p>
+    </div>
+    <div class="tl">
+      <div class="date">Первая версия</div>
+      <h3>Ядро и первые игры</h3>
+      <p>Собрали основу: boot-заставка, CRT-монитор, сканлайны, меню. Внутрь положили классические аркады — Flappy, Танчики, Pac-Man, Змейку.</p>
+    </div>
+    <div class="tl">
+      <div class="date">Развитие</div>
+      <h3>Игры в стиле Nintendo</h3>
+      <p>Добавили Kirby, Mario, Zelda, Metroid, Pokémon, Splatoon. Платформеры, приключения, пошаговые бои. Каждая — со своими уровнями и графикой.</p>
+    </div>
+    <div class="tl">
+      <div class="date">Аккаунты</div>
+      <h3>Разделение данных</h3>
+      <p>Появились аккаунты. У каждого игрока — свои сохранения, достижения, прогресс и картриджи. Всё хранится локально в браузере.</p>
+    </div>
+    <div class="tl">
+      <div class="date">Баг-репорт</div>
+      <h3>Игры не запускались</h3>
+      <p>Нашли фундаментальную ошибку: кнопка «Играть» ничего не делала. Оказалось — конфликт области видимости. Переписали реестр игр, починили запуск. Заодно исправили застревание персонажа в стене в CS 2D.</p>
+    </div>
+    <div class="tl">
+      <div class="date">Картриджи</div>
+      <h3>Игры как .txt</h3>
+      <p>Главная фишка: игры теперь импортируются как обычные текстовые файлы. Закинул картридж — он в меню с оранжевой меткой «ЭКС». Можно удалять, обновлять, делиться.</p>
+    </div>
+    <div class="tl">
+      <div class="date">Сейчас</div>
+      <h3>Air Combat и DeepSHOT</h3>
+      <p>Сверху написали два больших картриджа: DeepSHOT Mini (тактический шутер в стиле CS) и Air Combat (догфайты с выбором самолёта). Итого — около 9000 строк в одном HTML-файле.</p>
+    </div>
+  </div>
+</section>
+
+<section id="authors">
+  <h2>АВТОРЫ</h2>
+  <div class="sub">Кто это сделал</div>
+
+  <div class="authors">
+    <div class="author">
+      <div class="avatar">MD</div>
+      <div class="name">MAXIM DEMENTYEV</div>
+      <div class="role">Автор идеи</div>
+      <div class="desc">
+        Придумал концепцию псевдо-консоли, определил структуру и задачи. Нашёл ключевые баги (ЛКМ, запуск игр, застревание в стене), проверил каждую игру вручную. Благодаря его вниманию к деталям проект стал работать как надо.
+      </div>
+    </div>
+    <div class="author orange">
+      <div class="avatar">DS</div>
+      <div class="name">DeepSeek</div>
+      <div class="role">Написание кода</div>
+      <div class="desc">
+        Писал код: ядро консоли, движок игр, 19 игр, аккаунты, картриджи, достижения, сохранения. Разбирал баг-репорты и переписывал проблемные места. Более 9000 строк JavaScript, HTML и CSS в одном файле.
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="code">
+  <h2>КОД И ИНСТРУКЦИИ</h2>
+  <div class="sub">Для тех, кто хочет разобраться</div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="source">Исходник консоли</button>
+    <button class="tab" data-tab="deploy">Как выложить в интернет</button>
+    <button class="tab" data-tab="cart">Как сделать свою игру</button>
+  </div>
+
+  <div class="tab-panel active" id="panel-source">
+    <div class="code-box">
+      <div class="code-head">
+        <div class="file">pooconsole.html · один файл</div>
+        <button class="copy-btn" id="copyBtn">📋 Скопировать код</button>
+      </div>
+      <div class="code-view" id="codeView">Загрузка...</div>
+    </div>
+
+    <div class="cta">
+      <h3>💾 СКАЧАТЬ POOCONSOLE</h3>
+      <p>Один файл — вся консоль. Скачай, открой двойным кликом в браузере, играй.</p>
+      <button class="btn btn-main" id="downloadBtn2">📥 Скачать файл</button>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-deploy">
+    <div class="inst">
+      <h3>🌐 Как выложить PooConsole в интернет</h3>
+      <ol>
+        <li>Скачай PooConsole (кнопка выше) — это один файл.</li>
+        <li>Зарегистрируйся на <a href="https://github.com" target="_blank">github.com</a> — бесплатно, за 2 минуты.</li>
+        <li>Нажми <code>New repository</code>. Назови его <code>pooconsole</code>, поставь галочку <code>Public</code>, создай.</li>
+        <li>Нажми <code>Add file → Upload files</code>. Перетащи туда свой <code>pooconsole.html</code>. Внизу нажми <code>Commit changes</code>.</li>
+        <li>Открой <code>Settings → Pages</code>. В разделе <code>Source</code> выбери ветку <code>main</code>, папку <code>/ (root)</code>, сохрани.</li>
+        <li>Подожди 1–2 минуты. Обнови страницу — сверху появится ссылка вида <code>https://твой_ник.github.io/pooconsole/pooconsole.html</code>.</li>
+        <li>Готово. Эту ссылку можно скинуть другу — он откроет её на своём компьютере и будет играть.</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-cart">
+    <div class="inst">
+      <h3>🛠 Как сделать свою игру-картридж</h3>
+      <ol>
+        <li>Создай текстовый файл <code>mygame.txt</code> на компьютере.</li>
+        <li>Скопируй туда шаблон (ниже) или скачай его из консоли кнопкой «Скачать шаблон».</li>
+        <li>Напиши код игры: три функции — <code>init</code>, <code>update</code>, <code>render</code>.</li>
+        <li>Сохрани файл. Открой PooConsole → в меню нажми <code>💾 Картриджи</code> → <code>📥 Импорт</code>.</li>
+        <li>Перетащи туда свой <code>mygame.txt</code> — игра появится в меню с оранжевой меткой «ЭКС».</li>
+        <li>Играй. Сохранения, достижения и прогресс сохраняются у твоего аккаунта.</li>
+      </ol>
+      <p style="margin-top:14px;color:#8a9bb0;font-size:13px;">
+        📄 Простой шаблон картриджа можно скачать прямо из консоли: <b>Меню → Картриджи → Скачать шаблон</b>.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="faq">
+  <h2>ЧАСТЫЕ ВОПРОСЫ</h2>
+  <div class="sub">Скорее всего, ответ уже здесь</div>
+
+  <div class="faq">
+    <div class="faq-item">
+      <div class="faq-q">Открыл файл, а там просто текст, а не игра</div>
+      <div class="faq-a">
+        Проверь расширение файла. Он должен заканчиваться на <b>.html</b>, а не на <b>.txt</b>. Если расширение <b>.txt</b> — переименуй в <b>.html</b> и открой снова. Если компьютер не показывает расширения — включи их в настройках проводника (в Windows: «Вид» → галочка «Расширения имён файлов»).
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">Кнопка «Играть» не работает</div>
+      <div class="faq-a">
+        Обнови PooConsole до последней версии. В старых сборках был баг с запуском игр — он уже исправлен. Если ты на официальной странице — просто перезагрузи вкладку и попробуй снова.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">Как сохранить прогресс?</div>
+      <div class="faq-a">
+        Зарегистрируйся в консоли: логин (латиница + цифры) и пароль (6+ цифр). У каждого аккаунта свои сохранения, достижения и картриджи. Всё хранится в браузере на твоём устройстве — никуда не отправляется.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">Прогресс потерялся, что делать?</div>
+      <div class="faq-a">
+        Если ты чистил кэш браузера или заходил в режиме инкогнито — данные могли удалиться. В обычном режиме всё сохраняется. Для важных сохранений есть кнопка «Экспорт» в настройках консоли — она скачает JSON-файл со всеми данными.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">Как добавить новую игру?</div>
+      <div class="faq-a">
+        Скачай шаблон картриджа в меню консоли, напиши в нём свою игру, затем открой <b>Картриджи → Импорт</b> и перетащи файл. Игра появится в меню с меткой «ЭКС».
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">Нужен ли интернет для игры?</div>
+      <div class="faq-a">
+        Только для скачивания. После того как файл оказался на твоём компьютере — играй оффлайн, без подключения к сети. Интернет нужен только для загрузки картриджей из внешних источников.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">Это безопасно?</div>
+      <div class="faq-a">
+        Да. PooConsole — это один HTML-файл с чистым JavaScript. Никаких запросов на сервер, никакой аналитики, никаких сторонних библиотек. Всё что происходит — происходит только в твоём браузере.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">Можно ли выложить PooConsole на своём сайте?</div>
+      <div class="faq-a">
+        Да. Скачай файл, положи его на свой хостинг (GitHub Pages, Netlify или любой другой) — и ссылку можно давать кому угодно. Инструкция — во вкладке «Как выложить в интернет» в разделе «Код».
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="logo">POOCONSOLE</div>
+  <div>Игровая консоль в одном HTML-файле · 2025</div>
+  <div class="authors-line">
+    Идея — <b style="color:#d6e8ff">MAXIM DEMENTYEV</b> · Код — <b style="color:#ff6a00">DeepSeek</b>
+  </div>
+</footer>
+
+<script>
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+document.querySelectorAll('.faq-q').forEach(q => {
+  q.addEventListener('click', () => {
+    q.parentElement.classList.toggle('open');
+  });
+});
+
+let pooCode = '';
+const codeView = document.getElementById('codeView');
+const copyBtn = document.getElementById('copyBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+const downloadBtn2 = document.getElementById('downloadBtn2');
+
+fetch('pooconsole.html')
+  .then(res => {
+    if (!res.ok) throw new Error('not found');
+    return res.text();
+  })
+  .then(text => {
+    pooCode = text;
+    codeView.textContent = text;
+  })
+  .catch(() => {
+    pooCode = '// Файл pooconsole.html не найден.\n' +
+              '// Положи его рядом с index.html, либо скачай отдельно.';
+    codeView.textContent = pooCode;
+  });
+
+copyBtn.addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(pooCode);
+    copyBtn.textContent = '✅ Скопировано';
+    copyBtn.classList.add('done');
+    setTimeout(() => {
+      copyBtn.textContent = '📋 Скопировать код';
+      copyBtn.classList.remove('done');
+    }, 2000);
+  } catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = pooCode;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+    copyBtn.textContent = '✅ Скопировано';
+    setTimeout(() => { copyBtn.textContent = '📋 Скопировать код'; }, 2000);
+  }
+});
+
+function doDownload() {
+  if (!pooCode || pooCode.startsWith('// Файл pooconsole.html не найден')) {
+    alert('Файл PooConsole не найден. Положи его рядом с index.html.');
+    return;
+  }
+  const blob = new Blob([pooCode], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'pooconsole.html';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+downloadBtn.addEventListener('click', doDownload);
+downloadBtn2.addEventListener('click', doDownload);
+</script>
+
+</body>
+</html>
